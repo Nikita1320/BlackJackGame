@@ -15,10 +15,10 @@ public class Deck : MonoBehaviour
     [SerializeField] private float jumpPower;
     private Card currentCard;
     private bool spriteChanged = false;
+    public Card CurrentActiveCard => currentCard;
     private void Start()
     {
         TakeCard();
-
     }
     public void TakeCard()
     {

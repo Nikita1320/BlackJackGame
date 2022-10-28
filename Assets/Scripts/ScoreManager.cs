@@ -6,20 +6,35 @@ using DG.Tweening;
 
 public class ScoreManager : MonoBehaviour
 {
-    [SerializeField] private int score;
+    public delegate void GameLosedWithScore(int score);
+    public GameLosedWithScore gameLosedWithScoreEvent;
+
+    [SerializeField] private int bestScore;
+    [SerializeField] private TMP_Text bestScoreText;
+
+    [SerializeField] private int currentScore;
     [SerializeField] private TMP_Text scoreText;
+
     [SerializeField] private TMP_Text comboText;
-    [SerializeField] private int countCombo;
+
+    [SerializeField] private int counterCombo;
     [SerializeField] private int[] pointForCombo;
     [SerializeField] private int pointForColectFiveCard;
+
     [SerializeField] private string[] winningPhrase;
     [SerializeField] private string losePhrase;
     [SerializeField] private string collectFiveCardPhrase;
+
     [SerializeField] private CardsConteiner[] cardsConteiners;
+    [SerializeField] private Health health;
+    private SaveAndLoad saveAndLoad = new SaveAndLoad();
+
     [SerializeField] private float timeAnimationScoreText;
     private Quaternion baseRotationComboText;
     private void Start()
     {
+        bestScore = saveAndLoad.LoadBestScore();
+        RenderBestScore();
         baseRotationComboText = comboText.transform.rotation;
         for (int i = 0; i < cardsConteiners.Length; i++)
         {
@@ -27,38 +42,39 @@ public class ScoreManager : MonoBehaviour
             cardsConteiners[i].loseLineEvent += LoseLine;
             cardsConteiners[i].addedCardNotAffectEvent += ResetCombo;
         }
+        health.loseGameEvent += ResetScore;
     }
-    public void WinLine(List<Card> cards)
+    private void WinLine(List<Card> cards)
     {
-        if (countCombo > winningPhrase.Length - 1)
+        if (counterCombo > winningPhrase.Length - 1)
         {
-            score += pointForCombo[winningPhrase.Length - 1];
+            currentScore += pointForCombo[winningPhrase.Length - 1];
         }
         else
         {
-            score += pointForCombo[countCombo];
+            currentScore += pointForCombo[counterCombo];
         }
 
         if (cards.Count == 5)
         {
             TweenComboText(collectFiveCardPhrase);
-            score += pointForColectFiveCard;
+            currentScore += pointForColectFiveCard;
         }
         else
         {
-            if (countCombo > winningPhrase.Length - 1)
+            if (counterCombo > winningPhrase.Length - 1)
             {
                 TweenComboText(winningPhrase[winningPhrase.Length - 1]);
             }
             else
             {
-                TweenComboText(winningPhrase[countCombo]);
+                TweenComboText(winningPhrase[counterCombo]);
             }
         }
-        RenderScore();
-        countCombo++;
+        RenderCurrentScore();
+        counterCombo++;
     }
-    public void TweenComboText(string phrase)
+    private void TweenComboText(string phrase)
     {
         bool completeFirstTween = false;
         bool completeSecondTween = false;
@@ -81,16 +97,35 @@ public class ScoreManager : MonoBehaviour
                   }
               });
     }
-    public void LoseLine()
+    private void LoseLine()
     {
         TweenComboText(losePhrase);
+        ResetCombo();
     }
-    public void ResetCombo()
+    private void ResetCombo()
     {
-        countCombo = 0;
+        counterCombo = 0;
     }
-    public void RenderScore()
+    private void RenderCurrentScore()
     {
-        scoreText.text = score.ToString();
+        scoreText.text = currentScore.ToString();
+    }
+    private void RenderBestScore()
+    {
+        bestScoreText.text = "BS: " + bestScore.ToString();
+    }
+
+    public void ResetScore()
+    {
+        gameLosedWithScoreEvent?.Invoke(currentScore);
+        counterCombo = 0;
+        if (currentScore > bestScore)
+        {
+            bestScore = currentScore;
+            saveAndLoad.SaveBestScore(bestScore);
+        }
+        currentScore = 0;
+        RenderCurrentScore();
+        RenderBestScore();
     }
 }

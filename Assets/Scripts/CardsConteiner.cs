@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using DG.Tweening;
+using UnityEngine.UI;
 
 public class CardsConteiner : MonoBehaviour
 {
@@ -13,17 +15,36 @@ public class CardsConteiner : MonoBehaviour
     public WinLine winLineEvent;
     public delegate void AddedCardNotAffect();
     public AddedCardNotAffect addedCardNotAffectEvent;
+    public delegate void ClearedLine();
+    public ClearedLine clearedLineEvent;
 
     [SerializeField] private List<Card> cards;
     [SerializeField] private int winScore;
     [SerializeField] private TMP_Text currentScoreText;
     [SerializeField] private int[] currentScoreLine = new int[2];
     [SerializeField] private int[,] pointLine = new int[2, 5];
+    [SerializeField] private Health health;
+    [SerializeField] private float maxDelayToMoveCard;
+    [SerializeField] private float minDelayToMoveCard;
+    [SerializeField] private Transform moveTargetForClear;
+    [SerializeField] private float maxJumpPowerClearAnimations;
+    [SerializeField] private float minJumpPowerClearAnimations;
+    [SerializeField] private float timePlayAnimationsClear;
+    private Drop drop;
+    private GridLayoutGroup gridLayoutGroup;
+    private Coroutine clearCororutine;
 
+    public Card LastCard => cards[cards.Count - 1];
+    public List<Card> CardsInConteiner => cards;
+    private void Start()
+    {
+        drop = GetComponent<Drop>();
+        gridLayoutGroup = GetComponent<GridLayoutGroup>();
+        health.loseGameEvent += ResetGame;
+    }
     public void AddCard(Card card)
     {
         cards.Add(card);
-        addedCardEvent?.Invoke();
         if (currentScoreLine[0] + card.Point[0] <= 21 && currentScoreLine[1] + card.Point[1] <= 21)
         {
             pointLine[0,cards.Count - 1] = card.Point[0];
@@ -53,6 +74,7 @@ public class CardsConteiner : MonoBehaviour
         {
             addedCardNotAffectEvent?.Invoke();
         }
+        addedCardEvent?.Invoke();
     }
     private void RenderScoreConteiner()
     {
@@ -101,12 +123,63 @@ public class CardsConteiner : MonoBehaviour
             }
         }
 
-        int t = cards.Count;
-        for (int i = t - 1; i >= 0; i--)
+        if (clearCororutine == null)
         {
-            Destroy(cards[i].gameObject);
-            cards.RemoveAt(i);
+            clearCororutine = StartCoroutine(ClearLineCoroutine());
         }
+
         RenderScoreConteiner();
+        clearedLineEvent?.Invoke();
+    }
+    private IEnumerator ClearLineCoroutine()
+    {
+        if (cards.Count > 0)
+        {
+            drop.enabled = false;
+            Card[] cardsToClear = new Card[cards.Count];
+            for (int j = cards.Count - 1; j >= 0; j--)
+            {
+                cardsToClear[j] = cards[j];
+                Debug.Log($"{cardsToClear[j]} / index = {j}");
+                cards.RemoveAt(j);
+            }
+            int i = cardsToClear.Length - 1;
+            while (true)
+            {
+                yield return new WaitForSeconds(Random.Range(minDelayToMoveCard, maxDelayToMoveCard));
+                cardsToClear[i].transform.parent = moveTargetForClear;
+                cardsToClear[i].transform.SetAsFirstSibling();
+                TweenClearLine(cardsToClear[i].transform);
+                if (i == 0)
+                {
+                    drop.enabled = true;
+                    StopCoroutine(clearCororutine);
+                    clearCororutine = null;
+                }
+                i--;
+            }
+        }
+        else
+        {
+            clearCororutine = null;
+        }
+    }
+    public void TweenClearLine(Transform cardTransform)
+    {
+        bool endAnimations = false;
+        cardTransform.DOJump(moveTargetForClear.position, Random.Range(minJumpPowerClearAnimations, maxJumpPowerClearAnimations), 1, timePlayAnimationsClear);
+        cardTransform.DORotate(new Vector3(0, 0, 360), timePlayAnimationsClear, RotateMode.FastBeyond360).SetRelative(true).SetEase(Ease.OutCirc)
+            .OnComplete(() =>
+        {
+            if (endAnimations == false)
+            {
+                endAnimations = true;
+                Destroy(cardTransform.gameObject);
+            }
+        });
+    }
+    public void ResetGame()
+    {
+        ClearLine();
     }
 }
