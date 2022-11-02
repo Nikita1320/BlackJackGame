@@ -27,13 +27,14 @@ public class ScoreManager : MonoBehaviour
 
     [SerializeField] private CardsConteiner[] cardsConteiners;
     [SerializeField] private Health health;
-    private SaveAndLoad saveAndLoad = new SaveAndLoad();
+    private SaveAndLoad saveAndLoad;
 
     [SerializeField] private float timeAnimationScoreText;
     private Quaternion baseRotationComboText;
     private void Start()
     {
-        bestScore = saveAndLoad.LoadBestScore();
+        saveAndLoad = new SaveAndLoad();
+        bestScore = saveAndLoad.LoadBestScoreBinary(0);
         RenderBestScore();
         baseRotationComboText = comboText.transform.rotation;
         for (int i = 0; i < cardsConteiners.Length; i++)
@@ -122,7 +123,7 @@ public class ScoreManager : MonoBehaviour
         if (currentScore > bestScore)
         {
             bestScore = currentScore;
-            saveAndLoad.SaveBestScore(bestScore);
+            saveAndLoad.SaveBestScoreBinary(bestScore);
         }
         currentScore = 0;
         RenderCurrentScore();

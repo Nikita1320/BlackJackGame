@@ -9,23 +9,24 @@ public class Wallet: MonoBehaviour
     [SerializeField] private int countMoneyInBank;
     [SerializeField] private ScoreManager scoreManager;
     [SerializeField] private int dividerValueForTransitScoreToMoney;
-    private SaveAndLoad saveAndLoad = new SaveAndLoad();
+    private SaveAndLoad saveAndLoad;
     private void Start()
     {
+        saveAndLoad = new SaveAndLoad();
         scoreManager.gameLosedWithScoreEvent += AddCoinWithScoreValue;
-        countMoneyInBank = saveAndLoad.LoadMoney();
+        countMoneyInBank = saveAndLoad.LoadMoneyBinary(200);
         RenderCountMoney();
     }
     public void AddCoin(int countMoney)
     {
         countMoneyInBank += countMoney;
-        saveAndLoad.SaveMoney(countMoneyInBank);
+        saveAndLoad.SaveMoneyBinary(countMoneyInBank);
         RenderCountMoney();
     }
     private void AddCoinWithScoreValue(int score)
     {
         countMoneyInBank += (score / dividerValueForTransitScoreToMoney);
-        saveAndLoad.SaveMoney(countMoneyInBank);
+        saveAndLoad.SaveMoneyBinary(countMoneyInBank);
         RenderCountMoney();
     }
     private void RenderCountMoney()
@@ -34,7 +35,7 @@ public class Wallet: MonoBehaviour
     }
     public bool Buy(int cost)
     {
-        if (cost < countMoneyInBank)
+        if (cost <= countMoneyInBank)
         {
             countMoneyInBank -= cost;
             return true;
